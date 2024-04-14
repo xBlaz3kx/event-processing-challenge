@@ -1,0 +1,61 @@
+version: "3.9"
+services:
+
+  # Add traefik observability
+  traefik:
+    profiles:
+      - observability
+    command:
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--tracing.otlp.grpc.endpoint=lgtm-stack:4317"
+      - "--tracing.otlp.grpc=true"
+      - "--tracing.otlp.grpc.insecure=true"
+      - "--metrics.otlp=true"
+      - "--metrics.otlp.grpc.endpoint=lgtm-stack:4317"
+      - "--metrics.otlp.grpc.insecure=true"
+      - "--metrics.otlp.addRoutersLabels=true"
+      - "--metrics.otlp.addServicesLabels=true"
+
+  grafana-lgtm-stack:
+    image: grafana/otel-lgtm
+    container_name: lgtm-stack
+    hostname: lgtm-stack
+    profiles:
+      - observability
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.grafana.loadbalancer.server.port=3000
+      - traefik.http.routers.grafana.rule=Host(`grafana.localhost`)
+      - traefik.http.routers.grafana.service=grafana
+      - traefik.http.routers.grafana.entrypoints=http
+    environment:
+      - GF_SECURITY_ADMIN_USER="admin"
+      - GF_SECURITY_ADMIN_PASSWORD="admin"
+      - GF_LOG_LEVEL="debug"
+    volumes:
+      - prometheus:/prometheus
+      - loki:/data/loki
+      - grafana:/var/lib/grafana
+
+  promtail:
+    image: grafana/promtail:latest
+    hostname: promtail
+    restart: on-failure
+    container_name: promtail
+    profiles:
+      - observability
+    command:
+      - "-config.file=/etc/promtail/promtail.yaml"
+    depends_on:
+      - grafana-lgtm-stack
+    volumes:
+      - ../configs/promtail.yaml:/etc/promtail/promtail.yaml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+volumes:
+  prometheus:
+  grafana:
+  loki:
+  tempo_data:

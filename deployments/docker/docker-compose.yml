@@ -1,0 +1,138 @@
+version: "3.8"
+
+services:
+
+  # Traefik is a reverse proxy and load balancer that makes deploying microservices easy.
+  # Used for local development and testing.
+  traefik:
+    image: "traefik:v3.0"
+    container_name: "traefik"
+    restart: always
+    command:
+      - "--ping=true"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--entrypoints.http.address=:80"
+      - "--entrypoints.https.address=:443"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      - "--log.level=debug"
+      - "--log.format=json"
+      - "--core.defaultRuleSyntax=v2"
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    healthcheck:
+      test: wget --spider --tries=1 http://localhost:8080/ping || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    depends_on:
+      - kafka
+
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
+      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker-1:9092,PLAINTEXT_INTERNAL://localhost:19092
+      SCHEMA_REGISTRY_DEBUG: 'true'
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # Using Kafka as a streaming platform for real-time event processing.
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  # Benthos is a stream processor, used for Kafka enrichment.
+  benthos:
+    image: jeffail/benthos:latest
+    hostname: benthos
+    restart: on-failure
+    command: [ "-c", "/benthos.observability.yaml" ]
+    #volumes:
+    # - ./benthos.observability.yaml:/benthos.observability.yaml
+
+  # Using redis as a caching mechanism for the application. Using redis stack because of the UI.
+  redis:
+    image: redis/redis-stack:latest
+    hostname: redis
+    container_name: redis
+    restart: on-failure
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.redis.loadbalancer.server.port=8001
+      - traefik.http.routers.redis.rule=Host(`redis.localhost`)
+      - traefik.http.routers.redis.service=redis
+      - traefik.http.routers.redis.entrypoints=http
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  service:
+    image: service
+    restart: always
+    build:
+      context: ../..
+      dockerfile: ./build/service/Dockerfile
+
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.api.loadbalancer.server.port=8080
+      - traefik.http.routers.api.rule=Host(`api.localhost`)
+      - traefik.http.routers.api.service=api
+      - traefik.http.routers.api.entrypoints=http
+
+  # Generating the events
+  generator:
+    image: golang:1.17-alpine
+    working_dir: /app
+    command: [ "go", "run", "internal/cmd/generator/main.go" ]
+    volumes:
+      - "../../:/app"
+    profiles:
+      - manual
+
+  # Database for the application
+  database:
+    image: postgres:14-alpine
+    environment:
+      - POSTGRES_USER=casino
+      - POSTGRES_PASSWORD=casino
+    volumes:
+      - "../../scripts/db:/db"
+
+volumes:
+  redis:
+  postgres:
