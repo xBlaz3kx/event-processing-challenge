@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - main
     paths-ignore:
       - 'docs/**'
       - '.run/**'
@@ -16,21 +17,7 @@ on:
       - '*.md'
     tags:
       - v*
-  pull_request:
-    types: [ opened, synchronize ]
-    branches:
-      - master
-    paths-ignore:
-      - 'docs/**'
-      - '.run/**'
-      - '.vscode/**'
-      - 'api/**'
-      - 'features/**'
-      - 'config/**'
-      - 'deployments/**'
-      - 'scripts/**'
-      - 'assets/**'
-      - '*.md'
+
   workflow_dispatch:
 
 jobs:
