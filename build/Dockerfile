@@ -25,21 +25,26 @@ SHELL ["/bin/sh", "-l", "-c"]
 # Add curl for health checks
 RUN apk --update --no-cache add curl
 
-# Copy the service binary
-COPY --chown=$user:$group --from=build /app/service /usr/local/bin/service
-RUN chmod +x /usr/local/bin/service
-
+# Create a non-root user
 ARG user=app
 ARG group=docker
-
 RUN addgroup $group
 RUN adduser \
     --disabled-password \
     --gecos "" \
     --ingroup $group \
-    $user \
+    $user
 USER $user
 
+# Copy the service binary
+COPY --chown=$user:$group --from=build /app/service /usr/local/bin/service
+RUN chmod +x /usr/local/bin/service
+
 WORKDIR /usr/local/service
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=5s --timeout=3s --retries=3 \
+ CMD curl -f http://localhost:8080/healthz || exit 1
 
 ENTRYPOINT ["/usr/local/bin/service"]

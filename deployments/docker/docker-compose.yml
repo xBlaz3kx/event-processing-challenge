@@ -15,11 +15,22 @@ services:
       - "--providers.docker=true"
       - "--entrypoints.http.address=:80"
       - "--entrypoints.https.address=:443"
+      - "--entrypoints.metrics.address=:9090"
       - "--accesslog=true"
       - "--accesslog.format=json"
       - "--log.level=debug"
       - "--log.format=json"
       - "--core.defaultRuleSyntax=v2"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--tracing.otlp.grpc.endpoint=lgtm-stack:4317"
+      - "--tracing.otlp.grpc=true"
+      - "--tracing.otlp.grpc.insecure=true"
+      - "--metrics.otlp=true"
+      - "--metrics.otlp.grpc.endpoint=lgtm-stack:4317"
+      - "--metrics.otlp.grpc.insecure=true"
+      - "--metrics.otlp.addRoutersLabels=true"
+      - "--metrics.otlp.addServicesLabels=true"
     ports:
       - "80:80"
     volumes:
@@ -35,7 +46,6 @@ services:
     hostname: schema-registry
     depends_on:
       - kafka
-
     environment:
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
@@ -61,6 +71,8 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
     healthcheck:
       test: nc -z localhost 9092 || exit -1
       start_period: 15s
@@ -73,9 +85,9 @@ services:
     image: jeffail/benthos:latest
     hostname: benthos
     restart: on-failure
-    command: [ "-c", "/benthos.observability.yaml" ]
-    #volumes:
-    # - ./benthos.observability.yaml:/benthos.observability.yaml
+    command: [ "-c", "/benthos.yaml" ]
+    volumes:
+      - ../configs/benthos.config.yaml:/benthos.yaml
     depends_on:
       - kafka
     healthcheck:
@@ -112,7 +124,9 @@ services:
     restart: always
     build:
       context: ../..
-      dockerfile: ./build/service/Dockerfile
+      dockerfile: ./build/Dockerfile
+    depends_on:
+      - kafka
     labels:
       - traefik.enable=true
       - traefik.tags=public
@@ -120,12 +134,6 @@ services:
       - traefik.http.routers.api.rule=Host(`api.localhost`)
       - traefik.http.routers.api.service=api
       - traefik.http.routers.api.entrypoints=http
-    healthcheck:
-      test: curl -f http://localhost:8080/healthz || exit 1
-      start_period: 15s
-      interval: 15s
-      timeout: 5s
-      retries: 3
 
   # Generating the events
   generator:
@@ -145,6 +153,8 @@ services:
       - POSTGRES_PASSWORD=casino
     volumes:
       - "../../scripts/db:/db"
+    ports:
+      - "5432:5432"
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready" ]
       interval: 10s

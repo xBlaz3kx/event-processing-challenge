@@ -1,22 +1,6 @@
 version: "3.9"
 services:
 
-  # Add observability settings for Traefik
-  traefik:
-    profiles:
-      - observability
-    command:
-      - "--metrics.prometheus=true"
-      - "--metrics.prometheus.entryPoint=metrics"
-      - "--tracing.otlp.grpc.endpoint=lgtm-stack:4317"
-      - "--tracing.otlp.grpc=true"
-      - "--tracing.otlp.grpc.insecure=true"
-      - "--metrics.otlp=true"
-      - "--metrics.otlp.grpc.endpoint=lgtm-stack:4317"
-      - "--metrics.otlp.grpc.insecure=true"
-      - "--metrics.otlp.addRoutersLabels=true"
-      - "--metrics.otlp.addServicesLabels=true"
-
   # LGTM stack includes Grafana, Loki, Tempo, and Prometheus
   grafana-lgtm-stack:
     image: grafana/otel-lgtm

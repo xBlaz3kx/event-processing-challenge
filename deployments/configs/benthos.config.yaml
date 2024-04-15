@@ -11,8 +11,15 @@ input:
     consumer_group: ""
     checkpoint_limit: 1024
 
-pipeline:
-  processors:
+#pipeline:
+#  processors:
+#    -
+
+# Configure tracing with OTel
+tracer:
+  open_telemetry_collector:
+    grpc: [ "lgtm-stack:4317" ] # No default (required)
+
 
 output:
   resource: buz

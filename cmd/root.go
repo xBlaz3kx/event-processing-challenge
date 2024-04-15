@@ -23,6 +23,7 @@ var rootCmd = &cobra.Command{
 		defer stop()
 
 		logger := observability.NewLogger("debug")
+		logger.Info("Starting the service")
 
 		// Currency service
 		currencyCache := cache.NewRedisCache(cache.RedisConfiguration{}, logger)
@@ -32,8 +33,11 @@ var rootCmd = &cobra.Command{
 		playerService := player.NewServiceV1(logger)
 
 		// HTTP server
-		server := http.NewServer(logger, http.Configuration{}, currencyCache, currencyService, playerService)
+		server := http.NewServer(logger, http.Configuration{Address: "0.0.0.0:8080"}, currencyCache, currencyService, playerService)
 		go server.Run(ctx)
+
+		<-ctx.Done()
+		logger.Info("Shutting down the service")
 	},
 	Version: "v0.1.0",
 }
