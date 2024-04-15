@@ -158,3 +158,33 @@ GET http://localhost/materialized
 
 Log the events in their final form to standard output. Logs should be in JSON format and use the same keys as
 the `Event` type.
+
+## Solution
+
+I wrapped the event generator in a struct, just because I like the "Object oriented" approach a bit more.
+
+Tech stack:
+
+- Go
+- GORM (for Postgres)
+- Redis (for caching)
+- Gin (HTTP Framework)
+- Docker (with multistage image build and go cache for faster build times) and Docker Compose
+- Benthos (service (framework?) for event processing/transformations/enrichment)
+- Grafana LGTM stack (observability, because why not)
+- Traefik (local API Gateway)
+
+### Features
+
+- Added CI/CD steps (lint, test and build)
+- Added observability (just because)
+- Added health checks for various components, available at `/healthz`
+- Added local API Gateway (Traefik)
+
+### Possible improvements
+
+- Unit tests
+- Tracing and metrics via OTel for better observability
+- The whole task could be done using Benthos (mappings, even caching, etc.) but I wanted to show my programing skills
+  instead of configuration skills
+- Adding proper documentation (architecture, components, flows, etc.)

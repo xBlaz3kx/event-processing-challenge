@@ -68,7 +68,7 @@ services:
       timeout: 10s
       retries: 10
 
-  # Benthos is a stream processor, used for Kafka enrichment.
+  # Benthos is a stream processor, used for Kafka message enrichment.
   benthos:
     image: jeffail/benthos:latest
     hostname: benthos
@@ -76,6 +76,14 @@ services:
     command: [ "-c", "/benthos.observability.yaml" ]
     #volumes:
     # - ./benthos.observability.yaml:/benthos.observability.yaml
+    depends_on:
+      - kafka
+    healthcheck:
+      test: curl -f http://localhost:4195/ready || exit 1
+      start_period: 15s
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # Using redis as a caching mechanism for the application. Using redis stack because of the UI.
   redis:
@@ -100,12 +108,11 @@ services:
       retries: 3
 
   service:
-    image: service
+    image: xblaz3kx/service
     restart: always
     build:
       context: ../..
       dockerfile: ./build/service/Dockerfile
-
     labels:
       - traefik.enable=true
       - traefik.tags=public
@@ -113,6 +120,12 @@ services:
       - traefik.http.routers.api.rule=Host(`api.localhost`)
       - traefik.http.routers.api.service=api
       - traefik.http.routers.api.entrypoints=http
+    healthcheck:
+      test: curl -f http://localhost:8080/healthz || exit 1
+      start_period: 15s
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   # Generating the events
   generator:
@@ -132,6 +145,11 @@ services:
       - POSTGRES_PASSWORD=casino
     volumes:
       - "../../scripts/db:/db"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   redis:

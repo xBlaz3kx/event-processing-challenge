@@ -1,0 +1,23 @@
+input:
+  label: ""
+  kafka:
+    addresses:
+      - kafka:9092
+    topics:
+      - "casino-event"
+      - "casino-event-add-player"
+      - "casino-event-description"
+    target_version: 2.1.0 # No default (optional)
+    consumer_group: ""
+    checkpoint_limit: 1024
+
+pipeline:
+  processors:
+
+output:
+  resource: buz
+
+# Json logger
+logger:
+  level: INFO
+  format: json

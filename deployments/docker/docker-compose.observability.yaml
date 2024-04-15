@@ -1,7 +1,7 @@
 version: "3.9"
 services:
 
-  # Add traefik observability
+  # Add observability settings for Traefik
   traefik:
     profiles:
       - observability
@@ -17,6 +17,7 @@ services:
       - "--metrics.otlp.addRoutersLabels=true"
       - "--metrics.otlp.addServicesLabels=true"
 
+  # LGTM stack includes Grafana, Loki, Tempo, and Prometheus
   grafana-lgtm-stack:
     image: grafana/otel-lgtm
     container_name: lgtm-stack
