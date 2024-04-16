@@ -27,4 +27,4 @@ jobs:
     with:
       service: service
       docker_repository: service
-      dockerfile: "./build/service/Dockerfile"
+      dockerfile: "./build/Dockerfile"
