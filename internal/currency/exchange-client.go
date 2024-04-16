@@ -1,11 +1,38 @@
 package currency
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 )
+
+type conversionResponse struct {
+	Date       string `json:"date"`
+	Historical string `json:"historical"`
+	Info       struct {
+		Rate      float64 `json:"rate"`
+		Timestamp int     `json:"timestamp"`
+	} `json:"info"`
+	Query struct {
+		Amount int    `json:"amount"`
+		From   string `json:"from"`
+		To     string `json:"to"`
+	} `json:"query"`
+	Result  float64 `json:"result"`
+	Success bool    `json:"success"`
+}
+
+type latestResponse struct {
+	Base      string             `json:"base"`
+	Date      string             `json:"date"`
+	Rates     map[string]float64 `json:"rates"`
+	Success   bool               `json:"success"`
+	Timestamp int                `json:"timestamp"`
+}
 
 type exchangeRateApiClient struct {
 	*http.Client
@@ -16,15 +43,48 @@ type exchangeRateApiClient struct {
 func newExchangeRateApiClient(logger *zap.Logger) *exchangeRateApiClient {
 	return &exchangeRateApiClient{
 		Client: &http.Client{},
-		url:    "https://api.exchangeratesapi.io/latest",
+		url:    "https://api.exchangerate.host/latest",
 		logger: logger,
 	}
 }
 
 // getExchangeRate fetches the exchange rate from the API.
 func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrency, toCurrency string) (*float64, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s?symbols=%s&base=%s", c.url, toCurrency, fromCurrency), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot create a request")
+	}
 
-	return nil, nil
+	req.WithContext(ctx)
+	resp, err := c.Client.Do(req)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot execute a request")
+	}
+	defer resp.Body.Close()
+
+	bytes := make([]byte, resp.ContentLength)
+	_, err = resp.Body.Read(bytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot read response")
+	}
+
+	// Unmarshal the response
+	response := latestResponse{}
+	err = json.Unmarshal(bytes, &response)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot unmarshal response")
+	}
+
+	if !response.Success {
+		return nil, errors.New("unable to fetch exchange rate")
+	}
+
+	rate, found := response.Rates[toCurrency]
+	if !found {
+		return nil, errors.New("currency not found")
+	}
+
+	return &rate, nil
 }
 
 // ping checks if the API is reachable.

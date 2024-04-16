@@ -41,18 +41,6 @@ services:
       timeout: 5s
       retries: 3
 
-  schema-registry:
-    image: confluentinc/cp-schema-registry:latest
-    hostname: schema-registry
-    depends_on:
-      - kafka
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: 'zookeeper:2181'
-      SCHEMA_REGISTRY_LISTENERS: http://schema-registry:8081
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka-broker-1:9092,PLAINTEXT_INTERNAL://localhost:19092
-      SCHEMA_REGISTRY_DEBUG: 'true'
-
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -129,6 +117,8 @@ services:
       dockerfile: ./build/Dockerfile
     depends_on:
       - kafka
+      - redis
+      - database
     labels:
       - traefik.enable=true
       - traefik.tags=public
@@ -139,17 +129,17 @@ services:
 
   # Generating the events
   generator:
-    image: golang:1.17-alpine
-    working_dir: /app
-    command: [ "go", "run", "internal/cmd/generator/main.go" ]
-    volumes:
-      - "../../:/app"
+    image: xblaz3kx/generator:latest
+    build:
+      context: ../..
+      dockerfile: ./build/Dockerfile_generator
     profiles:
       - manual
 
   # Database for the application
   database:
     image: postgres:14-alpine
+    hostname: postgres
     environment:
       - POSTGRES_USER=casino
       - POSTGRES_PASSWORD=casino

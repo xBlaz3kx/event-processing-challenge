@@ -12,12 +12,12 @@ type Configuration struct {
 	Connection string `yaml:"connection"`
 }
 
-type Kafka struct {
+type Producer struct {
 	writer *kafka.Writer
-	reader *kafka.Reader
+	dialer *kafka.Dialer
 }
 
-func NewKafka() {
+func NewProducer() {
 
 	conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "topic", 1)
 	if err != nil {

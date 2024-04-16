@@ -182,7 +182,7 @@ of the problem and the ability to write code as well as usage of external tools,
 
 The Player data, currency and description enrichment are processed in Benthos - all pipelines call the service's HTTP
 API to get the enrichment data and then forward it to the next Kafka topic in the following order:
-`casino-event -> casino-event-currency -> casino-event-player-data -> casino-event-description`.
+`casino-event -> casino-event-currency -> casino-event-player-data -> casino-event-description -> casino-event-log`.
 
 The last topic's consumer is implemented in the service, so we can perform materialization and logging of the event.
 

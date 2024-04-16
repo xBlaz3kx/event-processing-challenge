@@ -7,15 +7,15 @@ import (
 	"github.com/xBlaz3kx/event-processing-challenge/internal/casino"
 )
 
-type Processor struct{}
+type DescriptionProcessor struct{}
 
-// NewProcessor creates a new event processor
-func NewProcessor() *Processor {
-	return &Processor{}
+// NewDescriptionProcessor creates a new event processor
+func NewDescriptionProcessor() *DescriptionProcessor {
+	return &DescriptionProcessor{}
 }
 
 // Process processes the event and returns a human-readable description of the event
-func (p *Processor) Process(event casino.Event) (string, error) {
+func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 	// todo validate the event type
 
 	initialString := fmt.Sprintf("Player #%d ", event.PlayerID)
@@ -71,7 +71,7 @@ func (p *Processor) Process(event casino.Event) (string, error) {
 }
 
 // getGameDescription returns the game description based on the game ID or an error if the game is not found.
-func (p *Processor) getGameDescription(gameId int) (string, error) {
+func (p *DescriptionProcessor) getGameDescription(gameId int) (string, error) {
 	gameDescription, isFound := casino.Games[gameId]
 	if !isFound {
 		return "", fmt.Errorf("game with ID %d not found", gameId)

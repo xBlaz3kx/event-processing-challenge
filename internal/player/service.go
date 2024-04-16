@@ -16,9 +16,10 @@ type ServiceV1 struct {
 	repository database.Repository
 }
 
-func NewServiceV1(logger *zap.Logger) *ServiceV1 {
+func NewServiceV1(logger *zap.Logger, repository database.Repository) *ServiceV1 {
 	return &ServiceV1{
-		logger: logger.Named("player-service-v1"),
+		logger:     logger.Named("player-service-v1"),
+		repository: repository,
 	}
 }
 

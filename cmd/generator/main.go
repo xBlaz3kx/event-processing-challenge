@@ -15,31 +15,40 @@ import (
 
 func main() {
 	logger := observability.NewLogger("debug")
+	logger.Info("Started the generator")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	// todo fetch from cfg file/env
+	kafkaCfg := "kafka:9092"
+
+	// todo revisit and refactor the Kafka package to make it more testable
+	conn, err := kafka.DialLeader(ctx, "tcp", kafkaCfg, "casino-event", 0)
+	if err != nil {
+		logger.Fatal("failed to dial leader", zap.Error(err))
+	}
 
 	gen := generator.New()
 	defer gen.Cleanup()
 
 	for event := range gen.Generate(ctx) {
 
-		// todo revisit and refactor the Kafka package to make it more testable
-		conn, err := kafka.DialLeader(context.Background(), "tcp", "localhost:9092", "topic", 1)
-		if err != nil {
-			logger.Fatal("failed to dial leader", zap.Error(err))
-		}
-
 		marshal, err := json.Marshal(event)
 		if err != nil {
-			logger.Fatal("failed to marshal event:", zap.Error(err))
+			logger.Error("failed to marshal event:", zap.Error(err))
 			continue
 		}
 
 		err = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		if err != nil {
+			logger.Error("failed to write messages", zap.Error(err))
+			continue
+		}
+
 		_, err = conn.WriteMessages(kafka.Message{Value: marshal})
 		if err != nil {
-			logger.Fatal("failed to write messages", zap.Error(err))
+			logger.Error("failed to write messages", zap.Error(err))
 			continue
 		}
 

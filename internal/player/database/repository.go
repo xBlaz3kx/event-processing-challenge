@@ -35,6 +35,7 @@ func NewPostgresPlayerRepository(logger *zap.Logger, cfg Configuration) *Postgre
 	}
 }
 
+// GetPlayerDetails returns player details from the database.
 func (r *PostgresRepository) GetPlayerDetails(ctx context.Context, playerID string) (*casino.Player, error) {
 	var player casino.Player
 	result := r.gormDriver.WithContext(ctx).First(&player, "id = ?", playerID)
@@ -45,6 +46,7 @@ func (r *PostgresRepository) GetPlayerDetails(ctx context.Context, playerID stri
 	return &player, nil
 }
 
+// Close closes the database connection.
 func (r *PostgresRepository) Close() error {
 	db, err := r.gormDriver.DB()
 	if err != nil {
