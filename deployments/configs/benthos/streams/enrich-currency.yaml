@@ -1,0 +1,9 @@
+input:
+  resource: base-event
+
+pipeline:
+  processors:
+    -
+
+output:
+  resource: currency

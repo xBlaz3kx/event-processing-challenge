@@ -1,0 +1,9 @@
+input:
+  resource: currency
+
+pipeline:
+  processors:
+    -
+
+output:
+  resource: player-data

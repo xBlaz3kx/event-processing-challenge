@@ -85,9 +85,11 @@ services:
     image: jeffail/benthos:latest
     hostname: benthos
     restart: on-failure
-    command: [ "-c", "/benthos.yaml" ]
+    command: "-w --chilled -c ./config.yaml -r ./resources.yaml streams ./streams/*.yaml"
     volumes:
-      - ../configs/benthos.config.yaml:/benthos.yaml
+      - ../configs/benthos/config.yaml:/config.yaml
+      - ../configs/benthos/resources.yaml:/resources.yaml
+      - ../configs/benthos/streams:/streams
     depends_on:
       - kafka
     healthcheck:

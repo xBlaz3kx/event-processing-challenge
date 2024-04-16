@@ -174,6 +174,18 @@ Tech stack:
 - Grafana LGTM stack (observability, because why not)
 - Traefik (local API Gateway)
 
+### Components and explanation
+
+I chose to use an existing solution (`Benthos`) for data enrichment and transformation instead of implementing it from
+scratch. The logging and materialization part could also be done in Benthos, but I wanted to display my understanding
+of the problem and the ability to write code as well as usage of external tools, creating a hybrid solution.
+
+The Player data, currency and description enrichment are processed in Benthos - all pipelines call the service's HTTP
+API to get the enrichment data and then forward it to the next Kafka topic in the following order:
+`casino-event -> casino-event-currency -> casino-event-player-data -> casino-event-description`.
+
+The last topic's consumer is implemented in the service, so we can perform materialization and logging of the event.
+
 ### Features
 
 - Added CI/CD steps (lint, test and build)

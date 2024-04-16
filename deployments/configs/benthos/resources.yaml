@@ -1,0 +1,54 @@
+input_resources:
+  - label: "base-event"
+    kafka:
+      addresses:
+        - kafka:9092
+      topics: [
+        "casino-event",
+      ]
+      consumer_group: ""
+      target_version: 2.1.0 # No default (optional)
+      checkpoint_limit: 1024
+
+  - label: "player-data"
+    kafka:
+      addresses:
+        - kafka:9092
+      topics: [
+        "casino-event-player-data",
+      ]
+      consumer_group: ""
+      target_version: 2.1.0 # No default (optional)
+      checkpoint_limit: 1024
+
+  - label: "currency"
+    kafka:
+      addresses:
+        - kafka:9092
+      topics: [
+        "casino-event-currency",
+      ]
+      consumer_group: ""
+      target_version: 2.1.0 # No default (optional)
+      checkpoint_limit: 1024
+
+output_resources:
+  - label: "player-data"
+    kafka:
+      addresses:
+        - kafka:9092
+      topic: "casino-event-player-data",
+      key: ""
+      partitioner: fnv1a_hash
+      target_version: 2.1.0 # No default (optional)
+      inject_tracing_map: root.meta.span = this
+
+  - label: "currency"
+    kafka:
+      addresses:
+        - kafka:9092
+      topic: "casino-event-currency",
+      target_version: 2.1.0 # No default (optional)
+      key: ""
+      partitioner: fnv1a_hash
+      inject_tracing_map: root.meta.span = this

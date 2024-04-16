@@ -1,0 +1,14 @@
+http:
+
+# Configure tracing with OTel
+tracer:
+  open_telemetry_collector:
+    grpc: [ "lgtm-stack:4317" ] # No default (required)
+
+# Json logger
+logger:
+  level: INFO
+  format: json
+
+metrics:
+  prometheus: { }
