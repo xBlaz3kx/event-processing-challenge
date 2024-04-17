@@ -40,10 +40,10 @@ type exchangeRateApiClient struct {
 	logger *zap.Logger
 }
 
-func newExchangeRateApiClient(logger *zap.Logger) *exchangeRateApiClient {
+func newExchangeRateApiClient(logger *zap.Logger, url string) *exchangeRateApiClient {
 	return &exchangeRateApiClient{
 		Client: &http.Client{},
-		url:    "https://api.exchangerate.host/latest",
+		url:    url,
 		logger: logger,
 	}
 }

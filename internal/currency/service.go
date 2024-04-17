@@ -19,10 +19,10 @@ type ServiceV1 struct {
 	logger          *zap.Logger
 }
 
-func NewServiceV1(logger *zap.Logger, currencyCache cache.Cache) *ServiceV1 {
+func NewServiceV1(logger *zap.Logger, currencyCache cache.Cache, exchangeRateUrl string) *ServiceV1 {
 	return &ServiceV1{
 		currencyCache:   currencyCache,
-		exchangeRateApi: newExchangeRateApiClient(logger),
+		exchangeRateApi: newExchangeRateApiClient(logger, exchangeRateUrl),
 		logger:          logger.Named("currency-service-v1"),
 	}
 }

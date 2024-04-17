@@ -125,6 +125,7 @@ services:
       - SERVICE_CACHE_PASSWORD=
       - SERVICE_CACHE_DB=0
       - SERVICE_DATABASE_DSN=postgres://casino:casino@postgres:5432/casino
+      - SERVICE_EXCHANGERATEURL=https://api.exchangerate.host/latest
     labels:
       - traefik.enable=true
       - traefik.tags=public

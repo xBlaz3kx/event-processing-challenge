@@ -45,7 +45,7 @@ func (r *RedisCache) Get(ctx context.Context, key string) (*float64, error) {
 	return nil, nil
 }
 
-// Set sets a value in the cache.
+// Set sets a value in the cache. The value will expire after 1 minute.
 func (r *RedisCache) Set(ctx context.Context, key string, value float64) error {
 	stat := r.redisClient.Set(ctx, key, value, time.Minute)
 	if stat == nil {

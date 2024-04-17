@@ -22,10 +22,11 @@ import (
 )
 
 type serviceConfig struct {
-	Kafka    kafka.Configuration      `yaml:"kafka"`
-	Database database.Configuration   `yaml:"database"`
-	Cache    cache.RedisConfiguration `yaml:"cache"`
-	Http     http.Configuration       `yaml:"http"`
+	Kafka           kafka.Configuration      `yaml:"kafka"`
+	Database        database.Configuration   `yaml:"database"`
+	Cache           cache.RedisConfiguration `yaml:"cache"`
+	Http            http.Configuration       `yaml:"http"`
+	ExchangeRateUrl string                   `yaml:"exchangeRateUrl"`
 }
 
 var configPath string
@@ -52,7 +53,7 @@ var rootCmd = &cobra.Command{
 
 		// Currency service
 		currencyCache := cache.NewRedisCache(config.Cache, logger)
-		currencyService := currency.NewServiceV1(logger, currencyCache)
+		currencyService := currency.NewServiceV1(logger, currencyCache, config.ExchangeRateUrl)
 
 		// Player service
 		playerRepository := database.NewPostgresPlayerRepository(logger, config.Database)
