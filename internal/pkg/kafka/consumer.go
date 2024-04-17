@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/pkg/errors"
@@ -25,7 +26,7 @@ func NewConsumer[T comparable](logger *zap.Logger, cfg Configuration, topic stri
 	return &Consumer[T]{
 		logger: logger,
 		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers:   []string{cfg.Connection},
+			Brokers:   cfg.Brokers,
 			Topic:     topic,
 			Partition: 0,
 			MinBytes:  1e3, // 1KB
@@ -43,30 +44,40 @@ func (c *Consumer[T]) Read(ctx context.Context, model T, callback func(T, error)
 		return
 	}
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			ctx, _ := context.WithTimeout(ctx, time.Millisecond*100)
-			message, err := c.reader.ReadMessage(ctx)
-
-			switch {
-			case err == nil:
-				// Unmarshal the message value into the model
-				err = json.Unmarshal(message.Value, &model)
-				if err != nil {
-					callback(model, err)
-					continue
-				}
-
-				callback(model, nil)
-			case errors.Is(err, context.DeadlineExceeded):
-				continue
-			default:
-				callback(model, err)
+	// Wrap in a goroutine to read messages in the background
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
 				return
+			default:
+				ctx, _ := context.WithTimeout(ctx, time.Millisecond*100)
+				message, err := c.reader.ReadMessage(ctx)
+
+				switch {
+				case err == nil:
+					// Unmarshal the message value into the model
+					err = json.Unmarshal(message.Value, &model)
+					if err != nil {
+						callback(model, err)
+						continue
+					}
+
+					callback(model, nil)
+				case errors.Is(err, context.DeadlineExceeded):
+					continue
+				case errors.Is(err, io.EOF):
+					// Reader is closed, exit the goroutine
+					return
+				default:
+					callback(model, err)
+					return
+				}
 			}
 		}
-	}
+	}()
+}
+
+func (c *Consumer[T]) Close() error {
+	return c.reader.Close()
 }
