@@ -2,6 +2,7 @@ package currency
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
@@ -38,7 +39,8 @@ func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount int) (i
 	}
 
 	// Check if the conversion is cached
-	if rate, err := s.currencyCache.Get(ctx, from+to); err == nil {
+	cacheKey := fmt.Sprintf("%s-%s", from, to)
+	if rate, err := s.currencyCache.Get(ctx, cacheKey); err == nil {
 		logger.Debug("Cache hit, using the exchange rate from cache", zap.Float64("rate", *rate))
 		return amount * int(*rate), nil
 	}
@@ -51,7 +53,7 @@ func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount int) (i
 	}
 
 	// Cache the exchange rate
-	if err := s.currencyCache.Set(ctx, from+to, *rate); err != nil {
+	if err := s.currencyCache.Set(ctx, cacheKey, *rate); err != nil {
 		logger.Warn("failed to cache exchange rate", zap.Error(err))
 	}
 
