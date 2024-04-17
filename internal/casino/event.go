@@ -9,6 +9,17 @@ var EventTypes = []string{
 	"game_stop",
 }
 
+// IsValidEventType checks if the given event type is valid.
+func IsValidEventType(eventType string) bool {
+	for _, t := range EventTypes {
+		if t == eventType {
+			return true
+		}
+	}
+
+	return false
+}
+
 type Event struct {
 	ID       int `json:"id"`
 	PlayerID int `json:"player_id"`

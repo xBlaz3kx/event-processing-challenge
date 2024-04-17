@@ -16,7 +16,11 @@ func NewDescriptionProcessor() *DescriptionProcessor {
 
 // Process processes the event and returns a human-readable description of the event
 func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
-	// todo validate the event type
+	// Validate the event type
+	isValid := casino.IsValidEventType(event.Type)
+	if !isValid {
+		return "", fmt.Errorf("event type \"%s\" invalid", event.Type)
+	}
 
 	initialString := fmt.Sprintf("Player #%d ", event.PlayerID)
 
@@ -62,7 +66,7 @@ func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 			return "", err
 		}
 
-		// Example: Player #1 (rick@example.com) has won a game "Blackjack" on February 1st, 2021 at 12:00 UTC
+		// Example: Player #1 (rick@morty.com) has won a game "Blackjack" on February 1st, 2021 at 12:00 UTC
 		// Example: Player #2 (rick@rick.com) has lost a game "Blackjack" on February 1st, 2021 at 12:00 UTC
 		initialString = fmt.Sprintf("%s has %s a game %s", initialString, hasWon, gameDescription)
 	}
