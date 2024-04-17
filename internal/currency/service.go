@@ -9,7 +9,7 @@ import (
 )
 
 type Service interface {
-	Convert(ctx context.Context, from, to string, amount float64) (float64, error)
+	Convert(ctx context.Context, from, to string, amount int) (int, error)
 }
 
 type ServiceV1 struct {
@@ -27,14 +27,20 @@ func NewServiceV1(logger *zap.Logger, currencyCache cache.Cache) *ServiceV1 {
 }
 
 // Convert converts the amount from one currency to another. If the cache is enabled, it will first check the cache for the conversion rate.
-func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount float64) (float64, error) {
-	logger := s.logger.With(zap.String("from", from), zap.String("to", to), zap.Float64("amount", amount))
-	logger.Debug("converting currency")
+func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount int) (int, error) {
+	logger := s.logger.With(zap.String("from", from), zap.String("to", to), zap.Int("amount", amount))
+	logger.Info("Converting currency")
+
+	// Check if from currency is equal to currency
+	if from == to {
+		logger.Debug("from currency is equal to currency")
+		return amount, nil
+	}
 
 	// Check if the conversion is cached
 	if rate, err := s.currencyCache.Get(ctx, from+to); err == nil {
 		logger.Debug("Cache hit, using the exchange rate from cache", zap.Float64("rate", *rate))
-		return amount * *rate, nil
+		return amount * int(*rate), nil
 	}
 
 	// If not cached, fetch the conversion rate from the API and cache it
@@ -49,7 +55,7 @@ func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount float64
 		logger.Warn("failed to cache exchange rate", zap.Error(err))
 	}
 
-	return amount * *rate, nil
+	return amount * int(*rate), nil
 }
 
 func (s *ServiceV1) Pass() bool {

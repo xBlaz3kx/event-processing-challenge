@@ -50,6 +50,7 @@ func newExchangeRateApiClient(logger *zap.Logger) *exchangeRateApiClient {
 
 // getExchangeRate fetches the exchange rate from the API.
 func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrency, toCurrency string) (*float64, error) {
+	c.logger.Debug("Fetching exchange rate from API", zap.String("from", fromCurrency), zap.String("to", toCurrency))
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s?symbols=%s&base=%s", c.url, toCurrency, fromCurrency), nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create a request")

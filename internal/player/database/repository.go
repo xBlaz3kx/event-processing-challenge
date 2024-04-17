@@ -15,7 +15,7 @@ type Configuration struct {
 
 type Repository interface {
 	// GetPlayerDetails returns player details from the database.
-	GetPlayerDetails(ctx context.Context, playerID string) (*casino.Player, error)
+	GetPlayerDetails(ctx context.Context, playerID int) (*casino.Player, error)
 }
 
 type PostgresRepository struct {
@@ -36,7 +36,7 @@ func NewPostgresPlayerRepository(logger *zap.Logger, cfg Configuration) *Postgre
 }
 
 // GetPlayerDetails returns player details from the database.
-func (r *PostgresRepository) GetPlayerDetails(ctx context.Context, playerID string) (*casino.Player, error) {
+func (r *PostgresRepository) GetPlayerDetails(ctx context.Context, playerID int) (*casino.Player, error) {
 	var player casino.Player
 	result := r.gormDriver.WithContext(ctx).First(&player, "id = ?", playerID)
 	if result.Error != nil {
