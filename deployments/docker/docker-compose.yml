@@ -119,6 +119,12 @@ services:
       - kafka
       - redis
       - database
+    environment:
+      - SERVICE_KAFKA_BROKERS=kafka:9092
+      - SERVICE_CACHE_ADDRESS=redis:6379
+      - SERVICE_CACHE_PASSWORD=
+      - SERVICE_CACHE_DB=0
+      - SERVICE_DATABASE_DSN=postgres://casino:casino@postgres:5432/casino
     labels:
       - traefik.enable=true
       - traefik.tags=public
@@ -133,6 +139,8 @@ services:
     build:
       context: ../..
       dockerfile: ./build/Dockerfile_generator
+    environment:
+      - KAFKA_BROKERS=kafka:9092
     profiles:
       - manual
 

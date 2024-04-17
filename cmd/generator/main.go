@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"os/signal"
-	"time"
+	"strings"
 
-	"github.com/segmentio/kafka-go"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/generator"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
@@ -20,35 +19,19 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	// todo fetch from cfg file/env
-	kafkaCfg := "kafka:9092"
+	// Get the Kafka configuration from the environment
+	brokers := os.Getenv("KAFKA_BROKERS")
+	kafkaCfg := kafka.Configuration{Brokers: strings.Split(brokers, ",")}
 
-	// todo revisit and refactor the Kafka package to make it more testable
-	conn, err := kafka.DialLeader(ctx, "tcp", kafkaCfg, "casino-event", 0)
-	if err != nil {
-		logger.Fatal("failed to dial leader", zap.Error(err))
-	}
-
+	producer := kafka.NewProducer(logger, kafkaCfg, "casino-event")
 	gen := generator.New()
 	defer gen.Cleanup()
 
 	for event := range gen.Generate(ctx) {
 
-		marshal, err := json.Marshal(event)
+		err := producer.Publish(ctx, event)
 		if err != nil {
-			logger.Error("failed to marshal event:", zap.Error(err))
-			continue
-		}
-
-		err = conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-		if err != nil {
-			logger.Error("failed to write messages", zap.Error(err))
-			continue
-		}
-
-		_, err = conn.WriteMessages(kafka.Message{Value: marshal})
-		if err != nil {
-			logger.Error("failed to write messages", zap.Error(err))
+			logger.Error("failed to publish messages", zap.Error(err))
 			continue
 		}
 

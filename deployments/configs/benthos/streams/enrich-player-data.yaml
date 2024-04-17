@@ -3,7 +3,20 @@ input:
 
 pipeline:
   processors:
-    -
+    - branch:
+        request_map: 'root = this'
+        processors:
+          - http:
+              url: "http://service:8080/events/currency" # No default (required)
+              verb: POST
+        result_map: 'root.repo.status = this'
+
+    - label: "enrich-currency"
+      http:
+        url: "http://service:8080/events/currency" # No default (required)
+        verb: POST
+        timeout: 5s
+        parallel: false
 
 output:
   resource: player-data

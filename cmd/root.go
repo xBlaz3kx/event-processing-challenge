@@ -6,10 +6,12 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	httpHandler "github.com/xBlaz3kx/event-processing-challenge/internal/api/http"
-	"github.com/xBlaz3kx/event-processing-challenge/internal/casino"
+	kafkaApi "github.com/xBlaz3kx/event-processing-challenge/internal/api/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/currency"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/configuration"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/http"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
@@ -18,6 +20,15 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 )
+
+type serviceConfig struct {
+	Kafka    kafka.Configuration      `yaml:"kafka"`
+	Database database.Configuration   `yaml:"database"`
+	Cache    cache.RedisConfiguration `yaml:"cache"`
+	Http     http.Configuration       `yaml:"http"`
+}
+
+var configPath string
 
 var rootCmd = &cobra.Command{
 	Use:   "event-processing-challenge",
@@ -30,25 +41,21 @@ var rootCmd = &cobra.Command{
 		logger := observability.NewLogger("debug")
 		logger.Info("Starting the service")
 
-		// todo fetch from cfg file/env
-		kafkaCfg := kafka.Configuration{
-			Connection: "kafka:9092",
+		// Fetch configuration
+		config := &serviceConfig{}
+		err := configuration.GetConfiguration(viper.GetViper(), config)
+		if err != nil {
+			logger.Fatal("Failed to get configuration", zap.Error(err))
 		}
 
-		dbCfg := database.Configuration{DSN: "postgres://casino:casino@postgres:5432/casino?sslmode=disable"}
-
-		cacheCfg := cache.RedisConfiguration{
-			Address:  "redis:6379",
-			Password: "",
-			DB:       0,
-		}
+		logger.Info("Configuration loaded", zap.Any("config", config))
 
 		// Currency service
-		currencyCache := cache.NewRedisCache(cacheCfg, logger)
+		currencyCache := cache.NewRedisCache(config.Cache, logger)
 		currencyService := currency.NewServiceV1(logger, currencyCache)
 
 		// Player service
-		playerRepository := database.NewPostgresPlayerRepository(logger, dbCfg)
+		playerRepository := database.NewPostgresPlayerRepository(logger, config.Database)
 		defer playerRepository.Close()
 		playerService := player.NewServiceV1(logger, playerRepository)
 
@@ -66,16 +73,10 @@ var rootCmd = &cobra.Command{
 
 		go server.Run(ctx)
 
-		// Create a Kafka consumer for the log stage
-		logConsumer := kafka.NewConsumer[casino.Event](logger, kafkaCfg, "casino-event-log")
-		logConsumer.Read(ctx, casino.Event{}, func(model casino.Event, err error) {
-			if err != nil {
-				logger.Error("Failed to read message", zap.Error(err))
-				return
-			}
-
-			logger.Info("Received event", zap.Any("event", model))
-		})
+		// Create Kafka API
+		kafkaApi := kafkaApi.NewApi(logger, config.Kafka, currencyService, playerService)
+		kafkaApi.StartConsumers(ctx)
+		defer kafkaApi.Close()
 
 		<-ctx.Done()
 		logger.Info("Shutting down the service")
@@ -84,12 +85,16 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute() {
+	cobra.OnInitialize(onInit)
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Path to the configuration file (default to $HOME/service/ or /usr/service/config)")
+	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
-func init() {
-	// rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+func onInit() {
+	configuration.SetupEnv("service")
+	configuration.InitConfig(configPath, "$HOME/service/", "/usr/service/config")
 }
