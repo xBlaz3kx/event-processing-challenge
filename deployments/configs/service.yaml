@@ -9,4 +9,6 @@ cache:
 database:
   dsn: postgres://casino:casino@postgres:5432/casino
 
-exchangeRateURL: https://api.exchangerate.host
+exchangeApi:
+  url: https://api.exchangerate.host
+  apiKey: Kd5I6oeaVwAvMyYjqFSJz41rrr6GkzyC

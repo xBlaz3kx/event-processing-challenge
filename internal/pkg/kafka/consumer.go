@@ -79,5 +79,6 @@ func (c *Consumer[T]) Read(ctx context.Context, model T, callback func(T, error)
 }
 
 func (c *Consumer[T]) Close() error {
+	c.logger.Debug("Closing Kafka consumer")
 	return c.reader.Close()
 }

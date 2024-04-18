@@ -10,6 +10,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+type ExchangeApiConfig struct {
+	Url    string `yaml:"url"`
+	ApiKey string `yaml:"apiKey"`
+}
+
 type conversionResponse struct {
 	Date       string `json:"date"`
 	Historical string `json:"historical"`
@@ -40,10 +45,10 @@ type exchangeRateApiClient struct {
 	logger *zap.Logger
 }
 
-func newExchangeRateApiClient(logger *zap.Logger, url string) *exchangeRateApiClient {
+func newExchangeRateApiClient(logger *zap.Logger, config ExchangeApiConfig) *exchangeRateApiClient {
 	return &exchangeRateApiClient{
 		Client: &http.Client{},
-		url:    url,
+		url:    config.Url,
 		logger: logger,
 	}
 }
@@ -62,6 +67,10 @@ func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrenc
 		return nil, errors.Wrap(err, "cannot execute a request")
 	}
 	defer resp.Body.Close()
+
+	if resp.ContentLength == 0 {
+		return nil, errors.New("empty response")
+	}
 
 	bytes := make([]byte, resp.ContentLength)
 	_, err = resp.Body.Read(bytes)

@@ -81,7 +81,8 @@ func (a *Api) CurrencyConsumer(ctx context.Context, currencyService currency.Ser
 			a.logger.Error("Failed to read message", zap.Error(err))
 			return
 		}
-		a.logger.Info("Received event", zap.Any("event", model))
+
+		a.logger.Info("Received Currency event", zap.Any("event", model))
 
 		// Fetch currency details from the currency service
 		conversion, err := currencyService.Convert(ctx, model.Currency, "EUR", model.Amount)
@@ -103,7 +104,7 @@ func (a *Api) CurrencyConsumer(ctx context.Context, currencyService currency.Ser
 // PlayerConsumer creates a Kafka consumer for the player enrichment stage
 func (a *Api) PlayerConsumer(ctx context.Context, playerService player.Service) {
 	// Create a producer for the next stage
-	producer := kafka.NewProducer(a.logger, a.cfg, PlayerDataTopic)
+	producer := kafka.NewProducer(a.logger, a.cfg, DescriptionTopic)
 
 	playerConsumer := kafka.NewConsumer[casino.Event](a.logger, a.cfg, PlayerDataTopic)
 	a.consumers["player"] = (*kafka.Consumer[any])(playerConsumer)
@@ -112,7 +113,7 @@ func (a *Api) PlayerConsumer(ctx context.Context, playerService player.Service) 
 			a.logger.Error("Failed to read message", zap.Error(err))
 			return
 		}
-		a.logger.Info("Received event", zap.Any("event", model))
+		a.logger.Info("Received Player event", zap.Any("event", model))
 
 		// Fetch player details from the player service
 		playerWithId, err := playerService.GetPlayerDetails(ctx, model.PlayerID)
@@ -171,7 +172,7 @@ func (a *Api) LogConsumer(ctx context.Context) {
 			return
 		}
 
-		a.logger.Info("Received event", zap.Any("event", model))
+		a.logger.Info("Logging event", zap.Any("event", model))
 	})
 }
 

@@ -47,6 +47,7 @@ func (p *Producer) Publish(ctx context.Context, message interface{}) error {
 		return errors.Wrap(err, "failed to marshal message")
 	}
 
+	p.logger.Info("Publishing message", zap.Any("message", message))
 	// Write the message to the Kafka topic
 	err = p.writer.WriteMessages(ctx, kafka.Message{
 		Value: marshal,

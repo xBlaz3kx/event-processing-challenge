@@ -3,6 +3,7 @@ package currency
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
@@ -19,10 +20,10 @@ type ServiceV1 struct {
 	logger          *zap.Logger
 }
 
-func NewServiceV1(logger *zap.Logger, currencyCache cache.Cache, exchangeRateUrl string) *ServiceV1 {
+func NewServiceV1(logger *zap.Logger, currencyCache cache.Cache, config ExchangeApiConfig) *ServiceV1 {
 	return &ServiceV1{
 		currencyCache:   currencyCache,
-		exchangeRateApi: newExchangeRateApiClient(logger, exchangeRateUrl),
+		exchangeRateApi: newExchangeRateApiClient(logger, config),
 		logger:          logger.Named("currency-service-v1"),
 	}
 }
@@ -42,7 +43,7 @@ func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount int) (i
 	cacheKey := fmt.Sprintf("%s-%s", from, to)
 	if rate, err := s.currencyCache.Get(ctx, cacheKey); err == nil {
 		logger.Debug("Cache hit, using the exchange rate from cache", zap.Float64("rate", *rate))
-		return amount * int(*rate), nil
+		return int(ConvertToStandardUnit(amount, from) * *rate), nil
 	}
 
 	// If not cached, fetch the conversion rate from the API and cache it
@@ -57,7 +58,19 @@ func (s *ServiceV1) Convert(ctx context.Context, from, to string, amount int) (i
 		logger.Warn("failed to cache exchange rate", zap.Error(err))
 	}
 
-	return amount * int(*rate), nil
+	return int(ConvertToStandardUnit(amount, from) * *rate), nil
+}
+
+// ConvertToStandardUnit converts the amount from the smallest unit to the standard unit of the given currency.
+func ConvertToStandardUnit(amount int, currency string) float64 {
+	switch strings.ToUpper(currency) {
+	case "EUR", "USD", "GBP", "NZD":
+		return float64(amount) / 100
+	case "BTC":
+		return float64(amount) / 100000000
+	default:
+		return float64(amount)
+	}
 }
 
 func (s *ServiceV1) Pass() bool {
