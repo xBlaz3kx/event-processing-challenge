@@ -28,6 +28,7 @@ func NewConsumer[T comparable](logger *zap.Logger, cfg Configuration, topic stri
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:   cfg.Brokers,
 			Topic:     topic,
+			GroupID:   "casino",
 			Partition: 0,
 			MinBytes:  1e3, // 1KB
 			MaxBytes:  1e4, // 1MB
@@ -39,11 +40,6 @@ func NewConsumer[T comparable](logger *zap.Logger, cfg Configuration, topic stri
 
 // Read reads messages from the Kafka topic and calls the callback function with the model and error.
 func (c *Consumer[T]) Read(ctx context.Context, model T, callback func(T, error)) {
-	err := c.reader.SetOffset(0)
-	if err != nil {
-		return
-	}
-
 	// Wrap in a goroutine to read messages in the background
 	go func() {
 		for {
