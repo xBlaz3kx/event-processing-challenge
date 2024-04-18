@@ -98,7 +98,7 @@ services:
 
   ksqldb-server:
     image: confluentinc/ksqldb-server:latest
-    hostname: primary-ksqldb-server
+    hostname: ksqldb-server
     depends_on:
       - kafka
       - schema-registry

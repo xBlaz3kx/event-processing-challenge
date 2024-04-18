@@ -27,6 +27,7 @@ type serviceConfig struct {
 	Cache       cache.RedisConfiguration   `yaml:"cache"`
 	Http        http.Configuration         `yaml:"http"`
 	ExchangeApi currency.ExchangeApiConfig `yaml:"exchangeApi"`
+	KsqlDb      kafka.KsqlConfiguration    `yaml:"ksqlDb"`
 }
 
 var configPath string

@@ -13,3 +13,8 @@ exchangeApi:
   #url: https://api.exchangerate.host
   url: https://api.apilayer.com/exchangerates_data
   apiKey: Kd5I6oeaVwAvMyYjqFSJz41rrr6GkzyC
+
+ksqlDb:
+  baseUrl: http://ksqldb-server:8088
+  username:
+  password:

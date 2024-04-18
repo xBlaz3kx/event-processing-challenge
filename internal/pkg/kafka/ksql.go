@@ -42,9 +42,9 @@ type KsqlClientV1 struct {
 }
 
 type KsqlConfiguration struct {
-	BaseUrl  string
-	Username string
-	Password string
+	BaseUrl  string `yaml:"baseUrl"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 func NewClientV1(logger *zap.Logger, cfg KsqlConfiguration) *KsqlClientV1 {
