@@ -255,7 +255,7 @@ services:
       - POSTGRES_USER=casino
       - POSTGRES_PASSWORD=casino
     volumes:
-      - "../../scripts/db:/db"
+      - "../../scripts/db/migrations:/docker-entrypoint-initdb.d"
     ports:
       - "5432:5432"
     healthcheck:
