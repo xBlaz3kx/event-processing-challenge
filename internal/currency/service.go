@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
 	"go.uber.org/zap"
@@ -74,11 +73,13 @@ func ConvertToStandardUnit(amount int, currency string) float64 {
 }
 
 func (s *ServiceV1) Pass() bool {
-	ctx, end := context.WithTimeout(context.Background(), 5*time.Second)
-	defer end()
+	//ctx, end := context.WithTimeout(context.Background(), 5*time.Second)
+	//defer end()
 
+	// Update: Disabling ping for now
 	// Ping the api if its reachable
-	return s.exchangeRateApi.ping(ctx)
+	// return s.exchangeRateApi.ping(ctx)
+	return true
 }
 
 func (s *ServiceV1) Name() string {

@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -42,7 +43,12 @@ func (r *RedisCache) Get(ctx context.Context, key string) (*float64, error) {
 		return nil, errors.Wrap(stat.Err(), "error getting value from redis cache")
 	}
 
-	return nil, nil
+	float, err := strconv.ParseFloat(stat.Val(), 64)
+	if err != nil {
+		return nil, err
+	}
+
+	return &float, nil
 }
 
 // Set sets a value in the cache. The value will expire after 1 minute.

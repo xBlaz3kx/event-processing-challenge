@@ -3,6 +3,7 @@ package currency
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -15,22 +16,6 @@ type ExchangeApiConfig struct {
 	ApiKey string `yaml:"apiKey"`
 }
 
-type conversionResponse struct {
-	Date       string `json:"date"`
-	Historical string `json:"historical"`
-	Info       struct {
-		Rate      float64 `json:"rate"`
-		Timestamp int     `json:"timestamp"`
-	} `json:"info"`
-	Query struct {
-		Amount int    `json:"amount"`
-		From   string `json:"from"`
-		To     string `json:"to"`
-	} `json:"query"`
-	Result  float64 `json:"result"`
-	Success bool    `json:"success"`
-}
-
 type latestResponse struct {
 	Base      string             `json:"base"`
 	Date      string             `json:"date"`
@@ -41,14 +26,14 @@ type latestResponse struct {
 
 type exchangeRateApiClient struct {
 	*http.Client
-	url    string
 	logger *zap.Logger
+	config ExchangeApiConfig
 }
 
 func newExchangeRateApiClient(logger *zap.Logger, config ExchangeApiConfig) *exchangeRateApiClient {
 	return &exchangeRateApiClient{
 		Client: &http.Client{},
-		url:    config.Url,
+		config: config,
 		logger: logger,
 	}
 }
@@ -56,11 +41,16 @@ func newExchangeRateApiClient(logger *zap.Logger, config ExchangeApiConfig) *exc
 // getExchangeRate fetches the exchange rate from the API.
 func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrency, toCurrency string) (*float64, error) {
 	c.logger.Debug("Fetching exchange rate from API", zap.String("from", fromCurrency), zap.String("to", toCurrency))
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s?symbols=%s&base=%s", c.url, toCurrency, fromCurrency), nil)
+
+	url := fmt.Sprintf("%s/latest?symbols=%s&base=%s", c.config.Url, toCurrency, fromCurrency)
+	c.logger.Debug("URL", zap.String("url", url))
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot create a request")
 	}
 
+	req.Header.Set("apiKey", c.config.ApiKey)
 	req.WithContext(ctx)
 	resp, err := c.Client.Do(req)
 	if err != nil {
@@ -68,19 +58,14 @@ func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrenc
 	}
 	defer resp.Body.Close()
 
-	if resp.ContentLength == 0 {
-		return nil, errors.New("empty response")
-	}
-
-	bytes := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(bytes)
+	all, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, errors.Wrap(err, "cannot read response")
+		return nil, err
 	}
 
 	// Unmarshal the response
 	response := latestResponse{}
-	err = json.Unmarshal(bytes, &response)
+	err = json.Unmarshal(all, &response)
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot unmarshal response")
 	}
@@ -99,13 +84,14 @@ func (c *exchangeRateApiClient) getExchangeRate(ctx context.Context, fromCurrenc
 
 // ping checks if the API is reachable.
 func (c *exchangeRateApiClient) ping(ctx context.Context) bool {
-	req, err := http.NewRequest("GET", c.url, nil)
+	req, err := http.NewRequest("GET", c.config.Url, nil)
 	if err != nil {
 		c.logger.Error("Cannot create a request", zap.Error(err))
 		return false
 	}
 
 	req.WithContext(ctx)
+	req.Header.Set("apiKey", c.config.ApiKey)
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		c.logger.Error("Unable to perform request", zap.Error(err))

@@ -10,5 +10,6 @@ database:
   dsn: postgres://casino:casino@postgres:5432/casino
 
 exchangeApi:
-  url: https://api.exchangerate.host
+  #url: https://api.exchangerate.host
+  url: https://api.apilayer.com/exchangerates_data
   apiKey: Kd5I6oeaVwAvMyYjqFSJz41rrr6GkzyC
