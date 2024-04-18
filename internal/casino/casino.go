@@ -1,35 +1,34 @@
 package casino
 
 import (
-	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/ksql"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
 )
 
 type Service interface {
-	GetStatistics(ctx context.Context) (*Statistics, error)
+	GetStatistics(ctx context.Context) (*kafka.Statistics, error)
 }
 
 type ServiceV1 struct {
-	client ksql.Client
+	client kafka.KsqlClient
 	logger *zap.Logger
 }
 
-func NewServiceV1(logger *zap.Logger, client ksql.Client) *ServiceV1 {
+func NewServiceV1(logger *zap.Logger, client kafka.KsqlClient) *ServiceV1 {
 	return &ServiceV1{
 		logger: logger.Named("casino-service"),
 		client: client,
 	}
 }
 
-func (s ServiceV1) GetStatistics(ctx context.Context) (*Statistics, error) {
+func (s ServiceV1) GetStatistics(ctx context.Context) (*kafka.Statistics, error) {
 	s.logger.Info("Getting statistics")
 
-	_, err := s.client.GetPlayerStatistics(ctx)
+	stats, err := s.client.GetPlayerStatistics(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return nil, nil
-	// return statistics.(*Statistics), nil
+	return stats, nil
 }

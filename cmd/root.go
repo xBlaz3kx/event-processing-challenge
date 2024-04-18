@@ -14,7 +14,6 @@ import (
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/configuration"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/http"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
-	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/ksql"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/player"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/player/database"
@@ -62,7 +61,8 @@ var rootCmd = &cobra.Command{
 		playerService := player.NewServiceV1(logger, playerRepository)
 
 		// Casino service
-		ksqlClient := ksql.NewClientV1(logger, ksql.Configuration{})
+		ksqlClient := kafka.NewClientV1(logger, kafka.KsqlConfiguration{})
+		defer ksqlClient.Close()
 		casinoService := casino.NewServiceV1(logger, ksqlClient)
 
 		// HTTP server
