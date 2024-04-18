@@ -15,6 +15,7 @@ func NewDescriptionProcessor() *DescriptionProcessor {
 }
 
 // Process processes the event and returns a human-readable description of the event
+// Note: Could've just used a string builder, but I wanted to keep it simple
 func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 	// Validate the event type
 	isValid := casino.IsValidEventType(event.Type)
@@ -49,7 +50,7 @@ func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 		initialString = fmt.Sprintf("%s bet %d %s on a game %s", initialString, event.Amount, event.Currency, gameDescription)
 	case "deposit":
 		// Example: Player #1 (ricknmorty@example.com) made a deposit of 5 EUR on February 1st, 2021 at 12:00 UTC
-		initialString = fmt.Sprintf("%s made a deposit of %d %s on %s", initialString, event.Amount, event.Currency, formatTime(event.CreatedAt))
+		initialString = fmt.Sprintf("%s made a deposit of %d %s", initialString, event.Amount, event.Currency)
 
 		// Example: Player #1 (rick@example.com) made a deposit of 5 USD (100 EUR) on February 1st, 2021 at 12:00 UTC
 		if event.Currency != "EUR" {
