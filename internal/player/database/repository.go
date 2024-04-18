@@ -6,6 +6,7 @@ import (
 	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"moul.io/zapgorm2"
 )
 
 type Configuration struct {
@@ -24,7 +25,12 @@ type PostgresRepository struct {
 }
 
 func NewPostgresPlayerRepository(logger *zap.Logger, cfg Configuration) *PostgresRepository {
-	db, err := gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{})
+	dbLogger := zapgorm2.New(logger.Named("gorm"))
+	dbLogger.SetAsDefault()
+
+	db, err := gorm.Open(postgres.Open(cfg.DSN), &gorm.Config{
+		Logger: dbLogger,
+	})
 	if err != nil {
 		logger.Panic("failed to connect to the database", zap.Error(err))
 	}

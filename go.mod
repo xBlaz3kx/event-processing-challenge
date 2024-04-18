@@ -18,6 +18,7 @@ require (
 	golang.org/x/net v0.24.0
 	gorm.io/driver/postgres v1.5.7
 	gorm.io/gorm v1.25.9
+	moul.io/zapgorm2 v1.3.0
 )
 
 require (
