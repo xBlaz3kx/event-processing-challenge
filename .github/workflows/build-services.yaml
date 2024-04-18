@@ -21,10 +21,42 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-service:
-    name: "Build the service"
+  build-generator-service:
+    name: "Build the generator"
     uses: ./.github/workflows/build.yaml
     with:
-      service: service
-      docker_repository: service
+      service: generator
+      docker_repository: generator
+      dockerfile: "./build/Dockerfile_generator"
+
+  build-log-service:
+    name: "Build the log service"
+    uses: ./.github/workflows/build.yaml
+    with:
+      service: log
+      docker_repository: log_service
       dockerfile: "./build/Dockerfile_log"
+
+  build-description-service:
+    name: "Build the description service"
+    uses: ./.github/workflows/build.yaml
+    with:
+      service: description
+      docker_repository: description_service
+      dockerfile: "./build/Dockerfile_description"
+
+  build-currency-service:
+    name: "Build the currency service"
+    uses: ./.github/workflows/build.yaml
+    with:
+      service: currency
+      docker_repository: currency_service
+      dockerfile: "./build/Dockerfile_currency"
+
+  build-player-service:
+    name: "Build the player service"
+    uses: ./.github/workflows/build.yaml
+    with:
+      service: player
+      docker_repository: player_service
+      dockerfile: "./build/Dockerfile_player"
