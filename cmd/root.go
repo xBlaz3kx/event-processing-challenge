@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"os"
 	"os/signal"
 	"syscall"
 
@@ -39,7 +38,7 @@ var rootCmd = &cobra.Command{
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 
-		logger := observability.NewLogger("debug")
+		logger := zap.L()
 		logger.Info("Starting the service")
 
 		// Fetch configuration
@@ -85,17 +84,27 @@ var rootCmd = &cobra.Command{
 	Version: "v0.1.0",
 }
 
+func init() {
+	cobra.OnInitialize(setupLogger, setupConfig)
+}
+
 func Execute() {
-	cobra.OnInitialize(onInit)
+	// Setup flag - config binding
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Path to the configuration file (default to $HOME/service/ or /usr/service/config)")
 	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		zap.L().Fatal("Failed to execute command", zap.Error(err))
 	}
 }
 
-func onInit() {
-	configuration.SetupEnv("service")
-	configuration.InitConfig(configPath, "$HOME/service/", "/usr/service/config")
+func setupLogger() {
+	logger := observability.NewLogger("debug")
+	zap.ReplaceGlobals(logger)
+}
+
+func setupConfig() {
+	configuration.InitConfig(configPath, "service", "$HOME/service/", "/usr/service/config")
+	zap.L().Info("Configuration set up", zap.Any("cfg", viper.AllSettings()), zap.String("configPath", configPath))
 }

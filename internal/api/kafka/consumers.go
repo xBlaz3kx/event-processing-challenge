@@ -35,6 +35,7 @@ func NewApi(logger *zap.Logger, cfg kafka.Configuration, currencyService currenc
 		currencyService: currencyService,
 		playerService:   playerService,
 		cfg:             cfg,
+		consumers:       make(map[string]*kafka.Consumer[any]),
 	}
 }
 

@@ -48,7 +48,10 @@ func SetupEnv(serviceName string) {
 }
 
 // InitConfig initializes the configuration for the service, either from file or from ETCD (if ETCD was set).
-func InitConfig(configurationFilePath string, additionalDirs ...string) {
+func InitConfig(configurationFilePath, serviceName string, additionalDirs ...string) {
+	// Setup environment variables
+	SetupEnv(serviceName)
+
 	home, err := homedir.Dir()
 	if err != nil {
 		log.Fatal(err)

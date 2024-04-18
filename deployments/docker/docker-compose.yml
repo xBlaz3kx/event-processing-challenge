@@ -87,6 +87,53 @@ services:
       timeout: 5s
       retries: 3
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    depends_on:
+      - zookeeper
+      - kafka
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
+
+  ksqldb-server:
+    image: confluentinc/ksqldb-server:latest
+    hostname: primary-ksqldb-server
+    depends_on:
+      - kafka
+      - schema-registry
+    ports:
+      - "8088:8088"
+    environment:
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_BOOTSTRAP_SERVERS: kafka:9092
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      # Configuration to embed Kafka Connect support.
+      KSQL_CONNECT_GROUP_ID: "ksql-connect-cluster"
+      KSQL_CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
+      KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
+      KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
+      KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "_ksql-connect-configs"
+      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "_ksql-connect-offsets"
+      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "_ksql-connect-statuses"
+      KSQL_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      KSQL_CONNECT_PLUGIN_PATH: "/usr/share/kafka/plugins"
+
+    # Access the cli by running:
+    # > docker-compose exec ksqldb-cli  ksql http://primary-ksqldb-server:8088
+  ksqldb-cli:
+    image: confluentinc/ksqldb-cli:latest
+    container_name: ksqldb-cli
+    depends_on:
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+
   # Using redis as a caching mechanism for the application. Using redis stack because of the UI.
   redis:
     image: redis/redis-stack:latest
@@ -115,17 +162,11 @@ services:
     build:
       context: ../..
       dockerfile: ./build/Dockerfile
+    command: -c /config/config.yaml
     depends_on:
       - kafka
       - redis
       - database
-    environment:
-      - SERVICE_KAFKA_BROKERS=kafka:9092
-      - SERVICE_CACHE_ADDRESS=redis:6379
-      - SERVICE_CACHE_PASSWORD=
-      - SERVICE_CACHE_DB=0
-      - SERVICE_DATABASE_DSN=postgres://casino:casino@postgres:5432/casino
-      - SERVICE_EXCHANGERATEURL=https://api.exchangerate.host/latest
     labels:
       - traefik.enable=true
       - traefik.tags=public
@@ -133,6 +174,8 @@ services:
       - traefik.http.routers.api.rule=Host(`api.localhost`)
       - traefik.http.routers.api.service=api
       - traefik.http.routers.api.entrypoints=http
+    volumes:
+      - ../configs/service.yaml:/config/config.yaml
 
   # Generating the events
   generator:
