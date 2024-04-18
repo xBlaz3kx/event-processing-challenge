@@ -12,6 +12,7 @@ import (
 
 type Configuration struct {
 	Brokers []string `yaml:"brokers"`
+	GroupId string   `yaml:"groupId"`
 }
 
 type Producer struct {

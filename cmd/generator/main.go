@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"strings"
 
+	kafkaApi "github.com/xBlaz3kx/event-processing-challenge/internal/api/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/generator"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
@@ -23,7 +24,7 @@ func main() {
 	brokers := os.Getenv("KAFKA_BROKERS")
 	kafkaCfg := kafka.Configuration{Brokers: strings.Split(brokers, ",")}
 
-	producer := kafka.NewProducer(logger, kafkaCfg, "casino-event")
+	producer := kafka.NewProducer(logger, kafkaCfg, kafkaApi.BaseEventTopic)
 	gen := generator.New()
 	defer gen.Cleanup()
 

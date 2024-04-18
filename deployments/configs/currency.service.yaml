@@ -1,20 +1,13 @@
 kafka:
   brokers: kafka:9092
+  groupId: casino-currency
 
 cache:
   address: redis:6379
   password: ""
   db: 0
 
-database:
-  dsn: postgres://casino:casino@postgres:5432/casino
-
 exchangeApi:
   #url: https://api.exchangerate.host
   url: https://api.apilayer.com/exchangerates_data
   apiKey: Kd5I6oeaVwAvMyYjqFSJz41rrr6GkzyC
-
-ksqlDb:
-  baseUrl: http://ksqldb-server:8088
-  username:
-  password:

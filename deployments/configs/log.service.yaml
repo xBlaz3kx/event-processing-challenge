@@ -1,0 +1,8 @@
+kafka:
+  brokers: kafka:9092
+  groupId: casino-log
+
+ksqlDb:
+  baseUrl: http://ksqldb-server:8088
+  username:
+  password:

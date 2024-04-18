@@ -74,6 +74,8 @@ services:
     hostname: benthos
     restart: on-failure
     command: "-w --chilled -c ./config.yaml -r ./resources.yaml streams ./streams/*.yaml"
+    profiles:
+      - emanual
     volumes:
       - ../configs/benthos/config.yaml:/config.yaml
       - ../configs/benthos/resources.yaml:/resources.yaml
@@ -156,26 +158,83 @@ services:
       timeout: 5s
       retries: 3
 
-  service:
-    image: xblaz3kx/service
-    restart: always
+  player-service:
+    image: xblaz3kx/player-service
+    restart: on-failure
     build:
       context: ../..
-      dockerfile: ./build/Dockerfile
+      dockerfile: ./build/Dockerfile_player
     command: -c /config/config.yaml
     depends_on:
       - kafka
-      - redis
       - database
     labels:
       - traefik.enable=true
       - traefik.tags=public
-      - traefik.http.services.api.loadbalancer.server.port=8080
-      - traefik.http.routers.api.rule=Host(`api.localhost`)
-      - traefik.http.routers.api.service=api
-      - traefik.http.routers.api.entrypoints=http
+      - traefik.http.services.player-service.loadbalancer.server.port=8080
+      - traefik.http.routers.player-service.rule=Host(`api.localhost`) && PathPrefix(`/player`)
+      - traefik.http.routers.player-service.service=player-service
+      - traefik.http.routers.player-service.entrypoints=http
     volumes:
-      - ../configs/service.yaml:/config/config.yaml
+      - ../configs/player.service.yaml:/config/config.yaml
+
+  currency-service:
+    image: xblaz3kx/currency-service
+    restart: on-failure
+    build:
+      context: ../..
+      dockerfile: ./build/Dockerfile_currency
+    command: -c /config/config.yaml
+    depends_on:
+      - kafka
+      - redis
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.currency-service.loadbalancer.server.port=8080
+      - traefik.http.routers.currency-service.rule=Host(`api.localhost`) && PathPrefix(`/currency`)
+      - traefik.http.routers.currency-service.service=currency-service
+      - traefik.http.routers.currency-service.entrypoints=http
+    volumes:
+      - ../configs/currency.service.yaml:/config/config.yaml
+
+  description-service:
+    image: xblaz3kx/description-service
+    restart: on-failure
+    build:
+      context: ../..
+      dockerfile: ./build/Dockerfile_description
+    command: -c /config/config.yaml
+    depends_on:
+      - kafka
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.description-service.loadbalancer.server.port=8080
+      - traefik.http.routers.description-service.rule=Host(`api.localhost`) && PathPrefix(`/events/description`)
+      - traefik.http.routers.description-service.service=description-service
+      - traefik.http.routers.description-service.entrypoints=http
+    volumes:
+      - ../configs/description.service.yaml:/config/config.yaml
+
+  log-service:
+    image: xblaz3kx/log-service
+    restart: on-failure
+    build:
+      context: ../..
+      dockerfile: ./build/Dockerfile_log
+    command: -c /config/config.yaml
+    depends_on:
+      - kafka
+    labels:
+      - traefik.enable=true
+      - traefik.tags=public
+      - traefik.http.services.log-service.loadbalancer.server.port=8080
+      - traefik.http.routers.log-service.rule=Host(`api.localhost`) && PathPrefix(`/materialize`)
+      - traefik.http.routers.log-service.service=description-service
+      - traefik.http.routers.log-service.entrypoints=http
+    volumes:
+      - ../configs/log.service.yaml:/config/config.yaml
 
   # Generating the events
   generator:

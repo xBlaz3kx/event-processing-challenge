@@ -28,7 +28,7 @@ func NewConsumer[T comparable](logger *zap.Logger, cfg Configuration, topic stri
 		reader: kafka.NewReader(kafka.ReaderConfig{
 			Brokers:   cfg.Brokers,
 			Topic:     topic,
-			GroupID:   "casino",
+			GroupID:   cfg.GroupId,
 			Partition: 0,
 			MinBytes:  1e3, // 1KB
 			MaxBytes:  1e4, // 1MB
