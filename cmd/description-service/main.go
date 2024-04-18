@@ -1,4 +1,4 @@
-package cmd
+package main
 
 import (
 	"os/signal"
@@ -10,12 +10,12 @@ import (
 	kafkaApi "github.com/xBlaz3kx/event-processing-challenge/internal/api/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/casino"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/currency"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/event"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/configuration"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/http"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
-	"github.com/xBlaz3kx/event-processing-challenge/internal/player"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/player/database"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
@@ -32,7 +32,7 @@ type serviceConfig struct {
 
 var configPath string
 
-var rootCmd = &cobra.Command{
+var logCmd = &cobra.Command{
 	Use:   "event-processing-challenge",
 	Short: "Event Processing Challenge",
 	Long:  ``,
@@ -52,38 +52,43 @@ var rootCmd = &cobra.Command{
 
 		logger.Info("Configuration loaded", zap.Any("config", config))
 
-		// Currency service
-		currencyCache := cache.NewRedisCache(config.Cache, logger)
-		currencyService := currency.NewServiceV1(logger, currencyCache, config.ExchangeApi)
-
-		// Player service
-		playerRepository := database.NewPostgresPlayerRepository(logger, config.Database)
-		defer playerRepository.Close()
-		playerService := player.NewServiceV1(logger, playerRepository)
-
-		// Casino service
-		ksqlClient := kafka.NewClientV1(logger, kafka.KsqlConfiguration{})
-		defer ksqlClient.Close()
-		casinoService := casino.NewServiceV1(logger, ksqlClient)
-
 		// HTTP server
-		server := http.NewServer(logger, http.Configuration{Address: "0.0.0.0:8080"}, currencyCache, currencyService, playerService, playerRepository)
+		server := http.NewServer(logger, http.Configuration{Address: "0.0.0.0:8080"})
 		router := server.Router()
-
-		handler := httpHandler.NewHandler(currencyService, playerService, casinoService)
+		handler := httpHandler.NewHandler(nil, nil, nil)
 
 		// Add http routes
-		router.GET("/player/:id", handler.GetPlayerDetails)
-		router.POST("/currency", handler.GetEurCurrency)
 		router.POST("/event/description", handler.GetEventDescription)
-		router.POST("/materialize", handler.Materialize)
-
 		go server.Run(ctx)
 
-		// Create Kafka API
-		kafkaApi := kafkaApi.NewApi(logger, config.Kafka, currencyService, playerService)
-		kafkaApi.StartConsumers(ctx)
-		defer kafkaApi.Close()
+		eventProcessor := event.NewDescriptionProcessor()
+
+		// Create a producer for the next stage
+		producer := kafka.NewProducer(logger, config.Kafka, kafkaApi.LogTopic)
+		descriptionConsumer := kafka.NewConsumer[casino.Event](logger, config.Kafka, kafkaApi.DescriptionTopic)
+		descriptionConsumer.Read(ctx, casino.Event{}, func(model casino.Event, err error) {
+			if err != nil {
+				logger.Error("Failed to read message", zap.Error(err))
+				return
+			}
+
+			logger.Info("Added description to the event", zap.Any("event", model))
+
+			description, err := eventProcessor.Process(model)
+			if err != nil {
+				logger.Error("Failed to create a description", zap.Error(err))
+				return
+			}
+
+			// Add a description to the event
+			model.Description = description
+
+			err = producer.Publish(ctx, model)
+			if err != nil {
+				logger.Error("Failed to publish message", zap.Error(err))
+			}
+		})
+		defer descriptionConsumer.Close()
 
 		<-ctx.Done()
 		logger.Info("Shutting down the service")
@@ -95,12 +100,12 @@ func init() {
 	cobra.OnInitialize(setupLogger, setupConfig)
 }
 
-func Execute() {
+func main() {
 	// Setup flag - config binding
-	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Path to the configuration file (default to $HOME/service/ or /usr/service/config)")
-	_ = viper.BindPFlag("config", rootCmd.PersistentFlags().Lookup("config"))
+	logCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Path to the configuration file (default to $HOME/service/ or /usr/service/config)")
+	_ = viper.BindPFlag("config", logCmd.PersistentFlags().Lookup("config"))
 
-	err := rootCmd.Execute()
+	err := logCmd.Execute()
 	if err != nil {
 		zap.L().Fatal("Failed to execute command", zap.Error(err))
 	}
