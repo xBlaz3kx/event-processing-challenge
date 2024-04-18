@@ -9,7 +9,6 @@ import (
 
 type Service interface {
 	GetPlayerDetails(ctx context.Context, playerID int) (*casino.Player, error)
-	GetStatistics(ctx context.Context) (*Statistics, error)
 }
 
 type ServiceV1 struct {
@@ -36,13 +35,6 @@ func (s *ServiceV1) GetPlayerDetails(ctx context.Context, playerID int) (*casino
 	}
 
 	return details, nil
-}
-
-func (s *ServiceV1) GetStatistics(ctx context.Context) (*Statistics, error) {
-	s.logger.Info("Getting statistics")
-
-	//TODO implement me
-	panic("implement me")
 }
 
 // Pass checks if the service is healthy.

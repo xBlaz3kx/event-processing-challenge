@@ -1,4 +1,4 @@
-package player
+package casino
 
 type Statistics struct {
 	EventsTotal                  int               `json:"events_total"`

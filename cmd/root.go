@@ -8,11 +8,13 @@ import (
 	"github.com/spf13/viper"
 	httpHandler "github.com/xBlaz3kx/event-processing-challenge/internal/api/http"
 	kafkaApi "github.com/xBlaz3kx/event-processing-challenge/internal/api/kafka"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/casino"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/currency"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/cache"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/configuration"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/http"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/kafka"
+	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/ksql"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/pkg/observability"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/player"
 	"github.com/xBlaz3kx/event-processing-challenge/internal/player/database"
@@ -59,11 +61,15 @@ var rootCmd = &cobra.Command{
 		defer playerRepository.Close()
 		playerService := player.NewServiceV1(logger, playerRepository)
 
+		// Casino service
+		ksqlClient := ksql.NewClientV1(logger, ksql.Configuration{})
+		casinoService := casino.NewServiceV1(logger, ksqlClient)
+
 		// HTTP server
 		server := http.NewServer(logger, http.Configuration{Address: "0.0.0.0:8080"}, currencyCache, currencyService, playerService, playerRepository)
 		router := server.Router()
 
-		handler := httpHandler.NewHandler(currencyService, playerService)
+		handler := httpHandler.NewHandler(currencyService, playerService, casinoService)
 
 		// Add http routes
 		router.GET("/event/player/:id", handler.GetPlayerDetails)
