@@ -1,0 +1,194 @@
+openapi: 3.0.3
+info:
+  title: Service
+  description: Service example
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8080'
+  - url: 'http://api.localhost'
+paths:
+  /player/:id:
+    get:
+      summary: Get player with ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Player ID
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /currency:
+    post:
+      summary: "Convert currency to desired currency"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: number
+                  format: int32
+                currency:
+                  type: string
+                desired_currency:
+                  type: string
+              required:
+                - amount
+                - currency
+                - desired_currency
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                properties:
+                  amount:
+                    type: number
+                    format: int32
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /event/description:
+    post:
+      summary: "Get event description"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Event'
+
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /materialize:
+    get:
+      summary: Materialize
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Materialize'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        email:
+          type: string
+        last_signed_in:
+          type: string
+          format: date-time
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int32
+        player_id:
+          type: integer
+          format: int32
+        game_id:
+          type: integer
+          format: int32
+        type:
+          type: string
+        amount:
+          type: number
+          format: int32
+        currency:
+          type: string
+        has_won:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        amount_eur:
+          type: number
+          format: int32
+        description:
+          type: string
+        player:
+          $ref: '#/components/schemas/Player'
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+
+    Materialize:
+      type: object
+      properties:
+        events_total:
+          type: number
+          format: int32

@@ -72,8 +72,8 @@ var rootCmd = &cobra.Command{
 		handler := httpHandler.NewHandler(currencyService, playerService, casinoService)
 
 		// Add http routes
-		router.GET("/event/player/:id", handler.GetPlayerDetails)
-		router.POST("/event/currency", handler.GetEurCurrency)
+		router.GET("/player/:id", handler.GetPlayerDetails)
+		router.POST("/currency", handler.GetEurCurrency)
 		router.POST("/event/description", handler.GetEventDescription)
 		router.POST("/materialize", handler.Materialize)
 
