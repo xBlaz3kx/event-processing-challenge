@@ -22,11 +22,11 @@ func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 		return "", fmt.Errorf("event type \"%s\" invalid", event.Type)
 	}
 
-	initialString := fmt.Sprintf("Player #%d ", event.PlayerID)
+	initialString := fmt.Sprintf("Player #%d", event.PlayerID)
 
 	// Add an email if it's available
 	if event.Player.Email != "" {
-		initialString = fmt.Sprintf("%s (%s) ", initialString, event.Player.Email)
+		initialString = fmt.Sprintf("%s (%s)", initialString, event.Player.Email)
 	}
 
 	// Based on the event type, add a description
