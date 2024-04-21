@@ -156,7 +156,7 @@ services:
       - traefik.tags=public
       - traefik.http.services.log-service.loadbalancer.server.port=8080
       - traefik.http.routers.log-service.rule=Host(`api.localhost`) && PathPrefix(`/materialize`)
-      - traefik.http.routers.log-service.service=description-service
+      - traefik.http.routers.log-service.service=log-service
       - traefik.http.routers.log-service.entrypoints=http
     volumes:
       - ../configs/log.service.yaml:/config/config.yaml

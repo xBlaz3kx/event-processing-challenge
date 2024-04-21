@@ -66,41 +66,51 @@ func NewClientV1(logger *zap.Logger, cfg KsqlConfiguration) *KsqlClientV1 {
 }
 
 func (c *KsqlClientV1) GetPlayerStatistics(ctx context.Context) (*Statistics, error) {
-	query := `select timestamptostring(windowstart,'yyyy-MM-dd HH:mm:ss','Europe/London') as window_start,
-			timestamptostring(windowend,'HH:mm:ss','Europe/London') as window_end, dog_size, dogs_ct
-				from dogs_by_size where dog_size=?;`
-
-	statement, err := ksqldb.QueryBuilder(query, "dogsize")
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to build query")
-	}
-
-	queryOpts := &ksqldb.QueryOptions{Sql: *statement}
-	queryOpts.EnablePullQueryTableScan(false)
-
-	_, rows, err := c.client.Pull(ctx, *queryOpts)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to execute query")
-	}
-
 	response := &Statistics{}
-	for _, row := range rows {
+
+	total, perMin, err := c.getEventsTotal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	response.EventsTotal = *total
+	response.EventsPerMinute = *perMin
+
+	return response, nil
+}
+
+func (c *KsqlClientV1) getEventsTotal(ctx context.Context) (*int, *float64, error) {
+	query := `SELECT COUNT(*), COUNT(*)/60.0 FROM CASINO_EVENTS_STREAM EMIT CHANGES LIMIT 1;`
+
+	statement, err := ksqldb.QueryBuilder(query)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to build query")
+	}
+
+	queryOpts := ksqldb.QueryOptions{Sql: *statement}
+
+	rowChan := make(chan ksqldb.Row)
+	headerChan := make(chan ksqldb.Header)
+
+	err = c.client.Push(ctx, queryOpts, rowChan, headerChan)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to execute query")
+	}
+
+	for row := range rowChan {
 		if row != nil {
-			// Should do some type assertions here
-			response.EventsTotal = row[0].(int)
-			response.EventsPerMinute = row[1].(float64)
-			response.EventsPerSecondMovingAverage = row[2].(float64)
-			response.TopPlayerBets.Id = row[3].(int)
-			response.TopPlayerBets.Count = row[4].(int)
-			response.TopPlayerWins.Id = row[5].(int)
-			response.TopPlayerWins.Count = row[6].(int)
-			response.TopPlayerDeposits.Id = row[7].(int)
-			response.TopPlayerDeposits.Count = row[8].(int)
+			totalEvents := row[0].(int)
+			eventsPerMin := row[1].(float64)
+			return &totalEvents, &eventsPerMin, nil
+		} else {
 			break
 		}
 	}
 
-	return response, nil
+	close(rowChan)
+	close(headerChan)
+
+	return nil, nil, errors.New("failed to get events total")
 }
 
 func (c *KsqlClientV1) Close() {

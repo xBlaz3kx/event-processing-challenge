@@ -46,7 +46,7 @@ var logCmd = &cobra.Command{
 		logger.Info("Configuration loaded", zap.Any("config", config))
 
 		// Casino service
-		ksqlClient := kafka.NewClientV1(logger, kafka.KsqlConfiguration{})
+		ksqlClient := kafka.NewClientV1(logger, config.KsqlDb)
 		defer ksqlClient.Close()
 		casinoService := casino.NewServiceV1(logger, ksqlClient)
 
