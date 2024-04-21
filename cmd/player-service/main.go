@@ -64,6 +64,7 @@ var playerCmd = &cobra.Command{
 
 		// Create a producer for the next stage
 		producer := kafka.NewProducer(logger, config.Kafka, kafkaApi.DescriptionTopic)
+		materializeProducer := kafka.NewProducer(logger, config.Kafka, kafkaApi.MaterializeTopic)
 
 		// Create Kafka API
 		playerConsumer := kafka.NewConsumer[casino.Event](logger, config.Kafka, kafkaApi.PlayerDataTopic)
@@ -87,6 +88,11 @@ var playerCmd = &cobra.Command{
 			err = producer.Publish(ctx, model)
 			if err != nil {
 				logger.Error("Failed to publish message", zap.Error(err))
+			}
+
+			err = materializeProducer.Publish(ctx, model)
+			if err != nil {
+				logger.Error("Failed to publish message for materialization", zap.Error(err))
 			}
 		})
 		defer playerConsumer.Close()

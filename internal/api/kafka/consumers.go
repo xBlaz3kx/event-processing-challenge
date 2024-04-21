@@ -15,6 +15,7 @@ const (
 	PlayerDataTopic  = "casino-event-player-data"
 	DescriptionTopic = "casino-event-description"
 	LogTopic         = "casino-event-log"
+	MaterializeTopic = "casino-event-materialize"
 )
 
 type Api struct {

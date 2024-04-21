@@ -40,33 +40,6 @@ services:
       timeout: 5s
       retries: 3
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-
-  # Using Kafka as a streaming platform for real-time event processing.
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"
-    healthcheck:
-      test: nc -z localhost 9092 || exit -1
-      start_period: 15s
-      interval: 5s
-      timeout: 10s
-      retries: 10
-
   # Benthos is a stream processor, used for Kafka message enrichment.
   benthos:
     image: jeffail/benthos:latest
@@ -87,139 +60,6 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-
-  schema-registry:
-    image: confluentinc/cp-schema-registry:latest
-    hostname: schema-registry
-    depends_on:
-      - zookeeper
-      - kafka
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
-
-  ksqldb-server:
-    image: confluentinc/ksqldb-server:latest
-    hostname: ksqldb-server
-    depends_on:
-      - kafka
-      - schema-registry
-    environment:
-      KSQL_LISTENERS: http://0.0.0.0:8088
-      KSQL_BOOTSTRAP_SERVERS: kafka:9092
-      KSQL_KSQL_SCHEMA_REGISTRY_URL: http://schema-registry:8081
-      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
-      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
-      # Configuration to embed Kafka Connect support.
-      KSQL_CONNECT_GROUP_ID: "ksql-connect-cluster"
-      KSQL_CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
-      KSQL_CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.storage.StringConverter"
-      KSQL_CONNECT_VALUE_CONVERTER: "io.confluent.connect.avro.AvroConverter"
-      KSQL_CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
-      KSQL_CONNECT_CONFIG_STORAGE_TOPIC: "_ksql-connect-configs"
-      KSQL_CONNECT_OFFSET_STORAGE_TOPIC: "_ksql-connect-offsets"
-      KSQL_CONNECT_STATUS_STORAGE_TOPIC: "_ksql-connect-statuses"
-      KSQL_CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
-      KSQL_CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
-      KSQL_CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
-      KSQL_CONNECT_PLUGIN_PATH: "/usr/share/kafka/plugins"
-
-  # We'll use the cli as the migration tool for the ksqlDB.
-  ksqldb-cli:
-    image: confluentinc/ksqldb-cli:latest
-    depends_on:
-      - ksqldb-server
-    command:
-      - ksql-migrations new-project /share/ksql-migrations http://ksqldb-server:8088
-      - ksql-migrations apply -a
-    volumes:
-      - ../../scripts/ksql:/share/ksql-migrations
-
-  kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.3.2
-    hostname: kafka-connect
-    environment:
-      CONNECT_BOOTSTRAP_SERVERS: "kafka:9092"
-      CONNECT_REST_PORT: 8083
-      CONNECT_GROUP_ID: compose-connect-group
-      CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
-      CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
-      CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
-      CONNECT_KEY_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL: 'http://chema-registry:8081'
-      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
-      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
-      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
-      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
-      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
-      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
-      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
-      CONNECT_PLUGIN_PATH: '/usr/share/java,/etc/kafka-connect/jars,/usr/share/confluent-hub-components'
-    volumes:
-      - ./connectors:/etc/kafka-connect/jars/
-    depends_on:
-      - zookeeper
-      - kafka
-      - schema-registry
-    command:
-      - bash
-      - -c
-      - |
-        confluent-hub install --no-prompt debezium/debezium-connector-mysql:latest
-        confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.4.0
-        /etc/confluent/docker/run
-
-  kafka-rest-proxy:
-    image: confluentinc/cp-kafka-rest:7.3.2
-    hostname: kafka-rest-proxy
-    ports:
-      - "8082:8082"
-    environment:
-      KAFKA_REST_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_REST_LISTENERS: http://0.0.0.0:8082/
-      KAFKA_REST_SCHEMA_REGISTRY_URL: http://kafka-schema-registry:8081/
-      KAFKA_REST_HOST_NAME: kafka-rest-proxy
-      KAFKA_REST_BOOTSTRAP_SERVERS: PLAINTEXT://kafka1:19092
-    depends_on:
-      - zookeeper
-      - kafka
-      - schema-registry
-
-  # Conduktor for UI
-  conduktor:
-    image: conduktor/conduktor-console:1.21.0
-    labels:
-      - traefik.enable=true
-      - traefik.tags=public
-      - traefik.http.services.conduktor.loadbalancer.server.port=8080
-      - traefik.http.routers.conduktor.rule=Host(`conduktor.localhost`)
-      - traefik.http.routers.conduktor.service=conduktor
-      - traefik.http.routers.conduktor.entrypoints=http
-    volumes:
-      - conduktor_data:/var/conduktor
-    environment:
-      CDK_DATABASE_URL: "postgresql://conduktor:conduktor@postgresql:5432/conduktor-console"
-      CDK_CLUSTERS_0_ID: "default"
-      CDK_CLUSTERS_0_NAME: "My Local Kafka Cluster"
-      CDK_CLUSTERS_0_COLOR: "#0013E7"
-      CDK_CLUSTERS_0_BOOTSTRAPSERVERS: "PLAINTEXT://kafka:9092"
-      CDK_CLUSTERS_0_SCHEMAREGISTRY_URL: "http://schema-registry:8081"
-      CDK_CLUSTERS_0_KAFKACONNECTS_0_URL: "http://kafka-connect:8083"
-      CDK_CLUSTERS_0_KAFKACONNECTS_0_NAME: "kafka connect"
-
-  postgresql:
-    image: postgres:14
-    hostname: postgresql
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: "conduktor-console"
-      POSTGRES_USER: "conduktor"
-      POSTGRES_PASSWORD: "conduktor"
-      POSTGRES_HOST_AUTH_METHOD: "scram-sha-256"
 
   # Using redis as a caching mechanism for the application. Using redis stack because of the UI.
   redis:
@@ -352,5 +192,3 @@ services:
 volumes:
   redis:
   postgres:
-  conduktor_data:
-  pg_data:
