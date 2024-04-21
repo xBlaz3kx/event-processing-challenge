@@ -9,7 +9,7 @@ CREATE STREAM casino_events_stream (
     created_at VARCHAR,
     player STRUCT<email VARCHAR,last_signed_in_at VARCHAR>
 )
-WITH (KAFKA_TOPIC='casino-events-materialize', VALUE_FORMAT='JSON', PARTITIONS=0);
+WITH (KAFKA_TOPIC='casino-event-materialize', VALUE_FORMAT='JSON', PARTITIONS=1);
 
 CREATE TABLE casino_player_stats AS
 SELECT player_id,

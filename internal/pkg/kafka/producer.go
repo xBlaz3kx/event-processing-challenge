@@ -23,11 +23,12 @@ type Producer struct {
 // NewProducer creates a new Kafka producer for the given topic.
 func NewProducer(logger *zap.Logger, configuration Configuration, topic string) *Producer {
 	w := &kafka.Writer{
-		Addr:         kafka.TCP(configuration.Brokers...),
-		Topic:        topic,
-		RequiredAcks: kafka.RequireAll,
-		Async:        true, // make the writer asynchronous
-		WriteTimeout: time.Second * 2,
+		Addr:                   kafka.TCP(configuration.Brokers...),
+		Topic:                  topic,
+		AllowAutoTopicCreation: true,
+		RequiredAcks:           kafka.RequireAll,
+		Async:                  true, // make the writer asynchronous
+		WriteTimeout:           time.Second * 2,
 		Completion: func(messages []kafka.Message, err error) {
 			if err != nil {
 				logger.Error("failed to write messages", zap.Error(err))

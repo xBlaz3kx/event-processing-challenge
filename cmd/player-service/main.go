@@ -90,6 +90,7 @@ var playerCmd = &cobra.Command{
 				logger.Error("Failed to publish message", zap.Error(err))
 			}
 
+			// Publish message for materialization
 			err = materializeProducer.Publish(ctx, model)
 			if err != nil {
 				logger.Error("Failed to publish message for materialization", zap.Error(err))
