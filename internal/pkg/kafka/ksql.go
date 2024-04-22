@@ -80,7 +80,7 @@ func (c *KsqlClientV1) GetPlayerStatistics(ctx context.Context) (*Statistics, er
 }
 
 func (c *KsqlClientV1) getEventsTotal(ctx context.Context) (*int, *float64, error) {
-	query := `SELECT COUNT(*), COUNT(*)/60.0 FROM CASINO_EVENTS_STREAM EMIT CHANGES LIMIT 1;`
+	query := `SELECT TOTAL_EVENTS FROM CASINO_EVENTS_STATS;`
 
 	statement, err := ksqldb.QueryBuilder(query)
 	if err != nil {
@@ -89,26 +89,44 @@ func (c *KsqlClientV1) getEventsTotal(ctx context.Context) (*int, *float64, erro
 
 	queryOpts := ksqldb.QueryOptions{Sql: *statement}
 
-	rowChan := make(chan ksqldb.Row)
-	headerChan := make(chan ksqldb.Header)
-
-	err = c.client.Push(ctx, queryOpts, rowChan, headerChan)
+	_, rows, err := c.client.Pull(ctx, queryOpts)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to execute query")
 	}
 
-	for row := range rowChan {
+	for _, row := range rows {
 		if row != nil {
 			totalEvents := row[0].(int)
-			eventsPerMin := row[1].(float64)
+			eventsPerMin := float64(totalEvents / 60.0)
 			return &totalEvents, &eventsPerMin, nil
-		} else {
-			break
 		}
 	}
 
-	close(rowChan)
-	close(headerChan)
+	return nil, nil, errors.New("failed to get events total")
+}
+
+func (c *KsqlClientV1) getTopPlayers(ctx context.Context) (*int, *float64, error) {
+	query := `SELECT player_id, player_bets, player_wins, player_deposits FROM CASINO_PLAYER_STATS;`
+
+	statement, err := ksqldb.QueryBuilder(query)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to build query")
+	}
+
+	queryOpts := ksqldb.QueryOptions{Sql: *statement}
+
+	_, rows, err := c.client.Pull(ctx, queryOpts)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to execute query")
+	}
+
+	for _, row := range rows {
+		if row != nil {
+			totalEvents := row[0].(int)
+			eventsPerMin := float64(totalEvents / 60.0)
+			return &totalEvents, &eventsPerMin, nil
+		}
+	}
 
 	return nil, nil, errors.New("failed to get events total")
 }

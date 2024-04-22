@@ -26,7 +26,7 @@ func (p *DescriptionProcessor) Process(event casino.Event) (string, error) {
 	initialString := fmt.Sprintf("Player #%d", event.PlayerID)
 
 	// Add an email if it's available
-	if event.Player.Email != "" {
+	if event.Player.IsZero() {
 		initialString = fmt.Sprintf("%s (%s)", initialString, event.Player.Email)
 	}
 

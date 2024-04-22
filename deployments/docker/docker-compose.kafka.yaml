@@ -103,7 +103,7 @@ services:
       CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
       CONNECT_PLUGIN_PATH: '/usr/share/java,/etc/kafka-connect/jars,/usr/share/confluent-hub-components'
     volumes:
-      - ./connectors:/etc/kafka-connect/jars/
+      - connectors:/etc/kafka-connect/jars/
     depends_on:
       - zookeeper
       - kafka
@@ -171,3 +171,4 @@ services:
 volumes:
   conduktor_data:
   pg_data:
+  connectors:
