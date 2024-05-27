@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/tavsec/gin-healthcheck v1.6.1
 	github.com/thmeitz/ksqldb-go v0.1.0
-	github.com/vearne/gin-timeout v0.1.7
+	github.com/vearne/gin-timeout v0.1.8
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.25.0
 	gorm.io/driver/postgres v1.5.7
